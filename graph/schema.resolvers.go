@@ -5,77 +5,81 @@ package graph
 
 import (
 	"context"
-	"fmt"
-	"math/rand"
 
+	"github.com/gibalmeida/go-jobs/ent"
 	"github.com/gibalmeida/go-jobs/graph/generated"
 	"github.com/gibalmeida/go-jobs/graph/model"
 )
 
-func (r *departmentResolver) Manager(ctx context.Context, obj *model.Department) (*model.User, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) CreateApplicant(ctx context.Context, user model.UserInput) (*ent.User, error) {
+	client := ent.FromContext(ctx)
+	return client.User.
+		Create().
+		SetName(user.Name).
+		SetEmail(user.Email).
+		SetPassword(user.Password).
+		SetRole("APPLICANT").
+		Save(ctx)
 }
 
-func (r *jobResolver) Department(ctx context.Context, obj *model.Job) (*model.Department, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) CreateDepartment(ctx context.Context, department model.DepartmentInput) (*ent.Department, error) {
+	client := ent.FromContext(ctx)
+	return client.Department.
+		Create().
+		SetName(department.Name).
+		Save(ctx)
 }
 
-func (r *mutationResolver) CreateAdmin(ctx context.Context, input model.NewAdmin) (*model.User, error) {
-	admin := &model.User{
-		Name:     input.Name,
-		Email:    input.Email,
-		Password: input.Password,
-		Role:     model.RoleAdmin,
-	}
-	r.users = append(r.users, admin)
-	return admin, nil
+func (r *mutationResolver) CreateJob(ctx context.Context, job *model.JobInput) (*ent.Job, error) {
+	// client := ent.FromContext(ctx)
+	return r.client.Job.
+		Create().
+		SetName(job.Name).
+		SetDescription(job.Description).
+		SetDepartmentID(job.Department).
+		Save(ctx)
 }
 
-func (r *mutationResolver) CreateManager(ctx context.Context, input model.NewManager) (*model.User, error) {
-	admin := &model.User{
-		Name:     input.Name,
-		Email:    input.Email,
-		Password: input.Password,
-		Role:     model.RoleManager,
-	}
-	r.users = append(r.users, admin)
-	return admin, nil
+func (r *mutationResolver) UpdateDepartmentManager(ctx context.Context, department *int, manager *int) (*ent.Department, error) {
+	return r.client.Department.UpdateOneID(*department).SetManagerID(*manager).Save(ctx)
 }
 
-func (r *mutationResolver) CreateApplicant(ctx context.Context, input model.NewApplicant) (*model.User, error) {
-	applicant := &model.User{
-		Name:     input.Name,
-		Email:    input.Email,
-		Password: input.Password,
-		Role:     model.RoleApplicant,
-	}
-	r.users = append(r.users, applicant)
-	return applicant, nil
+func (r *mutationResolver) UpdateJobDepartment(ctx context.Context, job *int, department *int) (*ent.Job, error) {
+	return r.client.Job.UpdateOneID(*job).SetDepartmentID(*department).Save(ctx)
 }
 
-func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) (*model.Todo, error) {
-	todo := &model.Todo{
-		Text:   input.Text,
-		ID:     fmt.Sprintf("T%d", rand.Int()),
-		UserID: input.UserID,
-	}
-	r.todos = append(r.todos, todo)
-	return todo, nil
+func (r *queryResolver) Node(ctx context.Context, id int) (ent.Noder, error) {
+	return r.client.Noder(ctx, id)
 }
 
-func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
-	return r.todos, nil
+func (r *queryResolver) Nodes(ctx context.Context, ids []int) ([]ent.Noder, error) {
+	return r.client.Noders(ctx, ids)
 }
 
-func (r *todoResolver) User(ctx context.Context, obj *model.Todo) (*model.User, error) {
-	return &model.User{ID: obj.UserID, Name: "user " + obj.UserID}, nil
+func (r *queryResolver) Users(ctx context.Context, after *ent.Cursor, first *int, before *ent.Cursor, last *int, orderBy *ent.UserOrder) (*ent.UserConnection, error) {
+	return r.client.User.Query().
+		Paginate(ctx, after, first, before, last,
+			ent.WithUserOrder(orderBy),
+		)
 }
 
-// Department returns generated.DepartmentResolver implementation.
-func (r *Resolver) Department() generated.DepartmentResolver { return &departmentResolver{r} }
+func (r *queryResolver) Departments(ctx context.Context, after *ent.Cursor, first *int, before *ent.Cursor, last *int, orderBy *ent.DepartmentOrder) (*ent.DepartmentConnection, error) {
+	return r.client.Department.Query().
+		Paginate(ctx, after, first, before, last,
+			ent.WithDepartmentOrder(orderBy),
+		)
+}
 
-// Job returns generated.JobResolver implementation.
-func (r *Resolver) Job() generated.JobResolver { return &jobResolver{r} }
+func (r *queryResolver) Jobs(ctx context.Context, after *ent.Cursor, first *int, before *ent.Cursor, last *int, orderBy *ent.JobOrder) (*ent.JobConnection, error) {
+	return r.client.Job.Query().
+		Paginate(ctx, after, first, before, last,
+			ent.WithJobOrder(orderBy),
+		)
+}
+
+func (r *userResolver) Role(ctx context.Context, obj *ent.User) (model.UserRole, error) {
+	return model.UserRole(obj.Role), nil
+}
 
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
@@ -83,21 +87,9 @@ func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResol
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
-// Todo returns generated.TodoResolver implementation.
-func (r *Resolver) Todo() generated.TodoResolver { return &todoResolver{r} }
+// User returns generated.UserResolver implementation.
+func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
 
-type departmentResolver struct{ *Resolver }
-type jobResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
-type todoResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.
-func (r *mutationResolver) CreateManagwer(ctx context.Context, input model.NewManager) (*model.User, error) {
-	panic(fmt.Errorf("not implemented"))
-}
+type userResolver struct{ *Resolver }

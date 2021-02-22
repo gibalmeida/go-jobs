@@ -2,76 +2,162 @@
 #
 # https://gqlgen.com/getting-started/
 
-type Todo {
+interface Node {
   id: ID!
-  text: String!
-  done: Boolean!
-  user: User!
 }
 
-type User {
+scalar Cursor
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: Cursor
+  endCursor: Cursor
+}
+
+type User implements Node {
   id: ID!
   name: String!
   email: String!
   password: String!
-  role: Role!
+  role: UserRole!
 }
 
-type Department {
+type Department implements Node {
   id: ID!
   name: String!
   manager: User!
 }
 
-type Job {
+type Job implements Node {
   id: ID!
   name: String!
   description: String!
   department: Department
 }
 
-directive @hasRole(role: Role!) on FIELD_DEFINITION
+directive @hasUserRole(role: UserRole!) on FIELD_DEFINITION
 
-enum Role {
+enum UserRole {
   ADMIN
   MANAGER
   APPLICANT
 }
 
+enum OrderDirection {
+  ASC
+  DESC
+}
+
+enum UserOrderField {
+  CREATED_AT
+  NAME
+  EMAIL
+}
+
+enum DepartmentOrderField {
+  NAME
+}
+
+enum JobOrderField {
+  NAME
+}
+
+
+input UserOrder {
+  direction: OrderDirection!
+  field: UserOrderField
+}
+
+input DepartmentOrder {
+  direction: OrderDirection
+  field: DepartmentOrderField
+}
+
+input JobOrder {
+  direction: OrderDirection
+  field: JobOrderField
+}
+
+type UserConnection {
+  totalCount: Int!
+  pageInfo: PageInfo!
+  edges: [UserEdge]
+}
+
+type UserEdge {
+  node: User
+  cursor: Cursor!
+}
+
+type DepartmentConnection {
+  totalCount: Int!
+  pageInfo: PageInfo!
+  edges: [DepartmentEdge]
+}
+
+type DepartmentEdge {
+  node: Department
+  cursor: Cursor!
+}
+
+type JobConnection {
+  totalCount: Int!
+  pageInfo: PageInfo!
+  edges: [JobEdge]
+}
+
+type JobEdge {
+  node: Job
+  cursor: Cursor!
+}
+
+input UserInput {
+  name: String!
+  email: String!
+  password: String!
+}
+
+input DepartmentInput {
+  name: String!
+}
+
+input JobInput {
+  name: String!
+  description: String!
+  department: ID!
+}
 
 type Query {
-  todos: [Todo!]!
-}
-
-input NewTodo {
-  text: String!
-  userId: String!
-}
-
-input NewAdmin {
-  name: String!
-  email: String!
-  password: String!
-}
-
-input NewManager {
-  name: String!
-  email: String!
-  password: String!
-  departmentId: ID!
-}
-
-input NewApplicant {
-  name: String!
-  email: String!
-  password: String!
+  node(id: ID!): Node
+  nodes(ids: [ID!]!): [Node]!
+  users(
+    after: Cursor
+    first: Int
+    before: Cursor
+    last: Int
+    orderBy: UserOrder
+  ): UserConnection
+  departments(
+    after: Cursor
+    first: Int
+    before: Cursor
+    last: Int
+    orderBy: DepartmentOrder
+  ): DepartmentConnection
+  jobs(
+    after: Cursor
+    first: Int
+    before: Cursor
+    last: Int
+    orderBy: JobOrder
+  ): JobConnection
 }
 
 type Mutation {
-  createAdmin(input: NewAdmin!): User!
-  createManager(input: NewManager!): User!
-  createApplicant(input: NewApplicant!): User!
-  createTodo(input: NewTodo!): Todo!
+  createApplicant(user: UserInput!): User
+  createDepartment(department: DepartmentInput!): Department
+  createJob(job: JobInput): Job!
+  updateDepartmentManager(department: ID, manager: ID): Department
+  updateJobDepartment(job: ID, department: ID): Job
 }
-
-

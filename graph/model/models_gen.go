@@ -8,77 +8,61 @@ import (
 	"strconv"
 )
 
-type NewAdmin struct {
+type DepartmentInput struct {
+	Name string `json:"name"`
+}
+
+type JobInput struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Department  int    `json:"department"`
+}
+
+type UserInput struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
-type NewApplicant struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type NewManager struct {
-	Name         string `json:"name"`
-	Email        string `json:"email"`
-	Password     string `json:"password"`
-	DepartmentID string `json:"departmentId"`
-}
-
-type NewTodo struct {
-	Text   string `json:"text"`
-	UserID string `json:"userId"`
-}
-
-type User struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Role     Role   `json:"role"`
-}
-
-type Role string
+type UserRole string
 
 const (
-	RoleAdmin     Role = "ADMIN"
-	RoleManager   Role = "MANAGER"
-	RoleApplicant Role = "APPLICANT"
+	UserRoleAdmin     UserRole = "ADMIN"
+	UserRoleManager   UserRole = "MANAGER"
+	UserRoleApplicant UserRole = "APPLICANT"
 )
 
-var AllRole = []Role{
-	RoleAdmin,
-	RoleManager,
-	RoleApplicant,
+var AllUserRole = []UserRole{
+	UserRoleAdmin,
+	UserRoleManager,
+	UserRoleApplicant,
 }
 
-func (e Role) IsValid() bool {
+func (e UserRole) IsValid() bool {
 	switch e {
-	case RoleAdmin, RoleManager, RoleApplicant:
+	case UserRoleAdmin, UserRoleManager, UserRoleApplicant:
 		return true
 	}
 	return false
 }
 
-func (e Role) String() string {
+func (e UserRole) String() string {
 	return string(e)
 }
 
-func (e *Role) UnmarshalGQL(v interface{}) error {
+func (e *UserRole) UnmarshalGQL(v interface{}) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
 	}
 
-	*e = Role(str)
+	*e = UserRole(str)
 	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid Role", str)
+		return fmt.Errorf("%s is not a valid UserRole", str)
 	}
 	return nil
 }
 
-func (e Role) MarshalGQL(w io.Writer) {
+func (e UserRole) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
