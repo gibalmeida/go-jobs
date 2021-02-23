@@ -5,6 +5,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gibalmeida/go-jobs/ent"
 	"github.com/gibalmeida/go-jobs/graph/generated"
@@ -20,6 +21,15 @@ func (r *mutationResolver) CreateApplicant(ctx context.Context, user model.UserI
 		SetPassword(user.Password).
 		SetRole("APPLICANT").
 		Save(ctx)
+}
+
+func (r *mutationResolver) RemoveApplicant(ctx context.Context, id int) (*ent.User, error) {
+	client := ent.FromContext(ctx)
+	user, err := client.User.Get(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("user %v not found", id)
+	}
+	return user, client.User.DeleteOneID(id).Exec(ctx)
 }
 
 func (r *mutationResolver) CreateDepartment(ctx context.Context, department model.DepartmentInput) (*ent.Department, error) {
