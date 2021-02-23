@@ -40,6 +40,15 @@ func (r *mutationResolver) CreateDepartment(ctx context.Context, department mode
 		Save(ctx)
 }
 
+func (r *mutationResolver) RemoveDepartment(ctx context.Context, id int) (*ent.Department, error) {
+	client := ent.FromContext(ctx)
+	department, err := client.Department.Get(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("department %v not found", id)
+	}
+	return department, client.Department.DeleteOneID(id).Exec(ctx)
+}
+
 func (r *mutationResolver) CreateJob(ctx context.Context, job *model.JobInput) (*ent.Job, error) {
 	// client := ent.FromContext(ctx)
 	return r.client.Job.

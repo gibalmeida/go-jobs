@@ -87,6 +87,7 @@ type ComplexityRoot struct {
 		CreateDepartment        func(childComplexity int, department model.DepartmentInput) int
 		CreateJob               func(childComplexity int, job *model.JobInput) int
 		RemoveApplicant         func(childComplexity int, id int) int
+		RemoveDepartment        func(childComplexity int, id int) int
 		UpdateDepartmentManager func(childComplexity int, department *int, manager *int) int
 		UpdateJobDepartment     func(childComplexity int, job *int, department *int) int
 	}
@@ -130,6 +131,7 @@ type MutationResolver interface {
 	CreateApplicant(ctx context.Context, user model.UserInput) (*ent.User, error)
 	RemoveApplicant(ctx context.Context, id int) (*ent.User, error)
 	CreateDepartment(ctx context.Context, department model.DepartmentInput) (*ent.Department, error)
+	RemoveDepartment(ctx context.Context, id int) (*ent.Department, error)
 	CreateJob(ctx context.Context, job *model.JobInput) (*ent.Job, error)
 	UpdateDepartmentManager(ctx context.Context, department *int, manager *int) (*ent.Department, error)
 	UpdateJobDepartment(ctx context.Context, job *int, department *int) (*ent.Job, error)
@@ -326,6 +328,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.RemoveApplicant(childComplexity, args["id"].(int)), true
+
+	case "Mutation.removeDepartment":
+		if e.complexity.Mutation.RemoveDepartment == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_removeDepartment_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RemoveDepartment(childComplexity, args["id"].(int)), true
 
 	case "Mutation.updateDepartmentManager":
 		if e.complexity.Mutation.UpdateDepartmentManager == nil {
@@ -733,6 +747,7 @@ type Mutation {
   createApplicant(user: UserInput!): User
   removeApplicant(id: ID!): User
   createDepartment(department: DepartmentInput!): Department
+  removeDepartment(id: ID!): Department
   createJob(job: JobInput): Job!
   updateDepartmentManager(department: ID, manager: ID): Department
   updateJobDepartment(job: ID, department: ID): Job
@@ -806,6 +821,21 @@ func (ec *executionContext) field_Mutation_createJob_args(ctx context.Context, r
 }
 
 func (ec *executionContext) field_Mutation_removeApplicant_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNID2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_removeDepartment_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 int
@@ -1788,6 +1818,45 @@ func (ec *executionContext) _Mutation_createDepartment(ctx context.Context, fiel
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return ec.resolvers.Mutation().CreateDepartment(rctx, args["department"].(model.DepartmentInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*ent.Department)
+	fc.Result = res
+	return ec.marshalODepartment2ᚖgithubᚗcomᚋgibalmeidaᚋgoᚑjobsᚋentᚐDepartment(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_removeDepartment(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_removeDepartment_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().RemoveDepartment(rctx, args["id"].(int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4204,6 +4273,8 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			out.Values[i] = ec._Mutation_removeApplicant(ctx, field)
 		case "createDepartment":
 			out.Values[i] = ec._Mutation_createDepartment(ctx, field)
+		case "removeDepartment":
+			out.Values[i] = ec._Mutation_removeDepartment(ctx, field)
 		case "createJob":
 			out.Values[i] = ec._Mutation_createJob(ctx, field)
 			if out.Values[i] == graphql.Null {

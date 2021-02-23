@@ -158,6 +158,7 @@ type Mutation {
   createApplicant(user: UserInput!): User
   removeApplicant(id: ID!): User
   createDepartment(department: DepartmentInput!): Department
+  removeDepartment(id: ID!): Department
   createJob(job: JobInput): Job!
   updateDepartmentManager(department: ID, manager: ID): Department
   updateJobDepartment(job: ID, department: ID): Job
