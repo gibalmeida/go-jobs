@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"log"
-	"net/http"
 	"os"
+
+	"github.com/gin-gonic/gin"
 
 	"entgo.io/contrib/entgql"
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -16,6 +17,27 @@ import (
 )
 
 const defaultPort = "8080"
+
+// Defining the Graphql handler
+func graphqlHandler(client *ent.Client) gin.HandlerFunc {
+	// NewExecutableSchema and Config are in the generated.go file
+	// Resolver is in the resolver.go file
+	h := handler.NewDefaultServer(graph.NewSchema(client))
+	h.Use(entgql.Transactioner{TxOpener: client})
+
+	return func(c *gin.Context) {
+		h.ServeHTTP(c.Writer, c.Request)
+	}
+}
+
+// Defining the Playground handler
+func playgroundHandler() gin.HandlerFunc {
+	h := playground.Handler("GraphQL", "/query")
+
+	return func(c *gin.Context) {
+		h.ServeHTTP(c.Writer, c.Request)
+	}
+}
 
 func main() {
 	port := os.Getenv("PORT")
@@ -36,12 +58,11 @@ func main() {
 		log.Fatalf("failed creating schema resources: %v", err)
 	}
 
-	srv := handler.NewDefaultServer(graph.NewSchema(client))
-	srv.Use(entgql.Transactioner{TxOpener: client})
-
-	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", srv)
+	// Setting up Gin
+	r := gin.Default()
+	r.POST("/query", graphqlHandler(client))
+	r.GET("/", playgroundHandler())
+	r.Run(":" + port)
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
